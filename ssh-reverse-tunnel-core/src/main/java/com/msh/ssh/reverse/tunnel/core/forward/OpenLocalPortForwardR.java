@@ -65,6 +65,7 @@ public class OpenLocalPortForwardR implements AutoCloseable {
     if(isClose()){
       return;
     }
+    log.debug("关闭OpenLocalPortForwardR");
     isClose = true;
     if(null != session){
       session.disconnect();

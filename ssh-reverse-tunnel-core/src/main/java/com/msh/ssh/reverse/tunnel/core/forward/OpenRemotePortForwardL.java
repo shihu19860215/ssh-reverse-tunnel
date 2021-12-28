@@ -55,7 +55,7 @@ public class OpenRemotePortForwardL implements AutoCloseable{
   private OutputStream os;
 
   private static final String PORT_CHECK = "ss -ln|grep %d";
-  private static final String CONNECT_CMD = "ssh -o StrictHostKeyChecking=no -NL *:%d:localhost:%d %s@localhost";
+  private static final String CONNECT_CMD = "ssh -o StrictHostKeyChecking=no -o GSSAPIAuthentication=no -NL *:%d:localhost:%d %s@localhost";
 
 
   private volatile boolean isClose = false;
@@ -155,6 +155,7 @@ public class OpenRemotePortForwardL implements AutoCloseable{
     if(isClose()){
       return;
     }
+    log.debug("关闭OpenRemotePortForwardL");
     isClose = true;
     if(null != os){
       //退出shell

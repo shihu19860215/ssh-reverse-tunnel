@@ -34,6 +34,7 @@ public class TunnelUtil {
     Session session = jSch.getSession(username, host, port);
     session.setPassword(password);
     session.setConfig("StrictHostKeyChecking", "no");
+    session.setConfig("GSSAPIAuthentication", "no");
     return session;
   }
 
