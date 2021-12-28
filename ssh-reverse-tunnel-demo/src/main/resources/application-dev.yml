@@ -1,0 +1,6 @@
+msh:
+  host: 192.168.70.128
+  port: 22
+  username: root
+  password: 123456789
+
