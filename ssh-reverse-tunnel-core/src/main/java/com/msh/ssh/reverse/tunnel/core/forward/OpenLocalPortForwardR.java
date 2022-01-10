@@ -3,39 +3,28 @@ package com.msh.ssh.reverse.tunnel.core.forward;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.msh.ssh.reverse.tunnel.core.bean.SshServerInfo;
+import com.msh.ssh.reverse.tunnel.core.thread.TimeoutMonitorRunnable;
 import com.msh.ssh.reverse.tunnel.core.util.TunnelUtil;
-import com.msh.ssh.reverse.tunnel.core.thread.TimeoutExecuteRunnable;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 打开本地反向隧道端口转发
+ * 不会做断线重连
  */
 @Slf4j
+@SuppressWarnings("AlibabaAvoidManuallyCreateThread")
 public class OpenLocalPortForwardR implements AutoCloseable {
   private SshServerInfo sshServerInfo;
+  private long timeout;
 
 
   public OpenLocalPortForwardR(SshServerInfo sshServerInfo, long timeout) throws JSchException {
     this.sshServerInfo = sshServerInfo;
+    this.timeout = timeout;
     session = TunnelUtil
         .getSession(sshServerInfo.getHost(), sshServerInfo.getPort(), sshServerInfo.getUsername(), sshServerInfo.getPassword());
     session.connect();
-    if(timeout > 0){
-      //超时关闭
-      new Thread(null,
-          new TimeoutExecuteRunnable(
-              ()->close(),
-              ()->{
-                if(isClose()){
-                  return true;
-                }
-                return false;
-              },
-              System.currentTimeMillis() + timeout
-          ),
-          "OpenLocalPortForwardR超时检查"
-      ).start();
-    }
+    startMonitor();
   }
 
   private Session session;
@@ -56,6 +45,11 @@ public class OpenLocalPortForwardR implements AutoCloseable {
   }
 
 
+  public boolean isConnect(){
+    log.debug("session is connect:{}.", session.isConnected());
+    return session.isConnected();
+  }
+
   public synchronized boolean isClose(){
     return isClose;
   }
@@ -72,4 +66,23 @@ public class OpenLocalPortForwardR implements AutoCloseable {
     }
   }
 
+  private void startMonitor(){
+    if(timeout <= 0) {
+      return;
+    }
+    //超时关闭
+    new Thread(null,
+        new TimeoutMonitorRunnable(
+            ()->close(),
+            ()->{
+              if(isClose()){
+                return true;
+              }
+              return false;
+            },
+            System.currentTimeMillis() + timeout
+        ),
+        "OpenLocalPortForwardR超时检查"
+    ).start();
+  }
 }

@@ -6,17 +6,17 @@ import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TimeoutExecuteRunnable implements Runnable{
+public class TimeoutMonitorRunnable implements Runnable{
   private IExecute execute;
   private IExit exit;
   private long endTime;
   private long sleepMilliSeconds;
 
-  public TimeoutExecuteRunnable(IExecute execute, IExit exit, long endTime) {
+  public TimeoutMonitorRunnable(IExecute execute, IExit exit, long endTime) {
     this(execute, exit, endTime, 3000L);
   }
 
-  public TimeoutExecuteRunnable(IExecute execute, IExit exit, long endTime, long sleepMilliSeconds) {
+  public TimeoutMonitorRunnable(IExecute execute, IExit exit, long endTime, long sleepMilliSeconds) {
     this.execute = execute;
     this.exit = exit;
     this.endTime = endTime;
@@ -32,9 +32,9 @@ public class TimeoutExecuteRunnable implements Runnable{
           break;
         }
       }catch (Exception e){
-        log.warn("TimeoutExcuteRunnable error.", e);
+        log.warn("TimeoutMonitorRunnable error.", e);
       }
-      if(exit.isExit()){
+      if(null != exit && exit.isExit()){
         break;
       }
 

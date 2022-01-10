@@ -33,6 +33,8 @@ public class TunnelUtil {
     JSch jSch = new JSch();
     Session session = jSch.getSession(username, host, port);
     session.setPassword(password);
+    session.setServerAliveInterval(60000);
+    session.setServerAliveCountMax(5);
     session.setConfig("StrictHostKeyChecking", "no");
     session.setConfig("GSSAPIAuthentication", "no");
     return session;

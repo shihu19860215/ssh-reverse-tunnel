@@ -6,7 +6,7 @@ import com.jcraft.jsch.Session;
 import com.msh.ssh.reverse.tunnel.core.bean.SshServerInfo;
 import com.msh.ssh.reverse.tunnel.core.exception.PortUsedException;
 import com.msh.ssh.reverse.tunnel.core.util.TunnelUtil;
-import com.msh.ssh.reverse.tunnel.core.thread.TimeoutExecuteRunnable;
+import com.msh.ssh.reverse.tunnel.core.thread.TimeoutMonitorRunnable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,10 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 打开远端服务器的端口转发功能
+ * 不会做断线重连
  */
 @Slf4j
+@SuppressWarnings("AlibabaAvoidManuallyCreateThread")
 public class OpenRemotePortForwardL implements AutoCloseable{
   private SshServerInfo sshServerInfo;
+  private long timeout;
 
   /**
    * @param sshServerInfo 远程服务器信息
@@ -28,25 +31,11 @@ public class OpenRemotePortForwardL implements AutoCloseable{
    */
   public OpenRemotePortForwardL(SshServerInfo sshServerInfo, long timeout) throws JSchException {
     this.sshServerInfo = sshServerInfo;
+    this.timeout = timeout;
     session = TunnelUtil
         .getSession(sshServerInfo.getHost(), sshServerInfo.getPort(), sshServerInfo.getUsername(), sshServerInfo.getPassword());
     session.connect();
-    if(timeout > 0){
-      //超时关闭
-      new Thread(null,
-          new TimeoutExecuteRunnable(
-              ()->close(),
-              ()->{
-                if(isClose()){
-                  return true;
-                }
-                return false;
-              },
-              System.currentTimeMillis() + timeout
-          ),
-          "OpenRemotePortForwardL超时检查"
-      ).start();
-    }
+    startMonitor();
   }
 
   private Session session;
@@ -146,6 +135,11 @@ public class OpenRemotePortForwardL implements AutoCloseable{
     }
   }
 
+  public boolean isConnect(){
+    log.debug("session is connect:{}. channel is connect:{}. channel is close:{}.", session.isConnected(), channel.isConnected(), channel.isClosed());
+    return session.isConnected() && channel.isConnected() && !channel.isClosed();
+  }
+
   public synchronized boolean isClose(){
     return isClose;
   }
@@ -183,4 +177,24 @@ public class OpenRemotePortForwardL implements AutoCloseable{
     }
   }
 
+
+  private void startMonitor(){
+    if(timeout <= 0) {
+      return;
+    }
+    //超时关闭
+    new Thread(null,
+        new TimeoutMonitorRunnable(
+            ()->close(),
+            ()->{
+              if(isClose()){
+                return true;
+              }
+              return false;
+            },
+            System.currentTimeMillis() + timeout
+        ),
+        "OpenRemotePortForwardL超时检查"
+    ).start();
+  }
 }
